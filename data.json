@@ -1,0 +1,29 @@
+{
+  "initRuleId": 11,
+  "data": {
+    "value": 777
+  },
+  "rules": [
+    {
+      "id": 11,
+      "title": "Title 11",
+      "ruleBody": "if( o.value > 10 ) return true;",
+      "trueId": 12,
+      "falseId": 13
+    },
+    {
+      "id": 12,
+      "title": "Title 12",
+      "ruleBody": "if( o.value > 100 ) return true;",
+      "trueId": 13,
+      "falseId": null
+    },
+    {
+      "id": 13,
+      "title": "Title 13",
+      "ruleBody": "if( o.value > 1000 ) return true;",
+      "trueId": null,
+      "falseId": 12
+    }
+  ]
+}

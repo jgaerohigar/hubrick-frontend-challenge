@@ -1,0 +1,135 @@
+<script type='text/javascript'>
+
+   (function () {
+      'use strict';
+
+      var Logger = function () {
+         this.colors = {
+            black: 'color: black',
+            green: 'color: green',
+            red: 'color: red'
+         }
+      };
+
+      Logger.prototype.log = function ( text, color ) {
+         console.log( '%c' + text, this.colors[ color ] || this.colors.black );
+      };
+
+      var Configurator = function () {};
+
+      Configurator.prototype.readJsonFile = function ( cb ) {
+         var xobj = new XMLHttpRequest();
+         xobj.overrideMimeType( 'application/json' );
+         xobj.open( 'GET', 'data.json', true );
+         xobj.onreadystatechange = function () {
+            if ( xobj.readyState == 4 && xobj.status == '200' ) {
+               cb( xobj.responseText );
+            }
+         };
+         xobj.send( null );
+      };
+
+      var Rule = function ( p ) {
+         this.id = p.id;
+         this.title = p.title;
+         this.ruleBody = p.ruleBody;
+         this.trueId = p.trueId;
+         this.falseId = p.falseId;
+      };
+
+      var FlowEngine = function () {
+         this.initRuleId = null;
+         this.data = null;
+         this.rules = {};
+         this.processedRules = {};
+      };
+
+      FlowEngine.prototype.addRule = function ( r ) {
+         if ( typeof this.rules[ r.id ] !== 'undefined' ) {
+            throw Error( 'Duplicate rule id found: ' + r.id );
+            return
+         }
+
+         try {
+            r.ruleBody = new Function( 'o', r.ruleBody );
+            this.rules[ r.id ] = new Rule( r );
+         } catch ( e ) {
+            throw Error( 'Invalid rule body found: ' + r.ruleBody );
+            return;
+         }
+      };
+
+      FlowEngine.prototype.addRules = function(r ) {
+         var that = this;
+
+         if ( r ) {
+            r.forEach( function ( v, k ) {
+               that.addRule( v );
+            } );
+         }
+      };
+
+      FlowEngine.prototype.executeRuleList = function () {
+         var currentRule = null;
+         var currentRuleId = this.initRuleId;
+
+         if ( this.initRuleId === null ) {
+            throw Error( 'Missing entry rule id "initRuleId" in json' );
+            return;
+         }
+
+         while ( currentRuleId !== null ) {
+            if ( this.processedRules[ currentRuleId ] ) {
+               throw Error( 'Circular structure. Cannot repeatedly execute rule ' + currentRuleId );
+               return;
+            }
+
+            currentRule = flowEngine.rules[ currentRuleId ];
+
+            if ( typeof currentRule === 'undefined' ) {
+               throw Error( 'Missing rule with id ' + currentRuleId + ' in json' );
+               return;
+            }
+
+            this.processedRules[ currentRuleId ] = true;
+
+            if ( currentRule.ruleBody( this.data ) ) {
+               logger.log( 'Rule ' + currentRule.title + ' (#' + currentRule.id + ') passed', 'green' );
+               currentRuleId = currentRule.trueId;
+            } else {
+               logger.log( 'Rule ' + currentRule.title + ' (#' + currentRule.id + ') failed', 'red' );
+               currentRuleId = currentRule.falseId;
+            }
+
+         }
+
+         logger.log( 'End', 'black' );
+
+      };
+
+      // ============================================
+      // -- FLOW ENGINE --
+      // ============================================
+
+      var logger = new Logger();
+
+      var configurator = new Configurator();
+
+      var flowEngine = new FlowEngine();
+
+      configurator.readJsonFile( function ( response ) {
+         var json = JSON.parse( response );
+
+         flowEngine.data = json.data;
+
+         flowEngine.initRuleId = json.initRuleId;
+
+         flowEngine.addRules( json.rules );
+
+         flowEngine.executeRuleList();
+
+      } );
+
+   })();
+
+</script>
